@@ -21,14 +21,11 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #fdfbf7; -webkit-tap-highlight-color: transparent; }
         .serif-font { font-family: 'Lora', serif; }
-        
-        /* Highlight Color */
         ::selection { background: #fed7aa; color: #431407; }
-
-        /* Animation Classes */
+        
+        /* Animations */
         @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
@@ -37,7 +34,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+        const { useState, useEffect, useRef } = React;
 
         // --- ICONS ---
         const Icons = {
@@ -53,23 +50,30 @@
             Bell: ({ active }) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
         };
 
+        // --- BACKUP DATA (Çevrimdışı Mod İçin) ---
+        const BACKUP_STORIES = [
+            {
+                title: "Pinocchio - L'inizio (Yedek)",
+                sections: [{id:0, text:"C'era una volta... — Un re! — diranno subito i miei piccoli lettori. No, ragazzi, avete sbagliato. C'era una volta un pezzo di legno.", isHeader:false}, {id:1, text:"Non era un legno di lusso, ma un semplice pezzo da catasta, di quelli che d'inverno si mettono nelle stufe e nei caminetti per accendere il fuoco e per riscaldare le stanze.", isHeader:false}],
+                source: "Carlo Collodi", type: "Klasik Hikaye", url: null, image: null
+            },
+            {
+                title: "Il Corvo e la Volpe (Yedek)",
+                sections: [{id:0, text:"Un corvo aveva rubato un pezzo di formaggio ed era andato a posarsi sopra un albero.", isHeader:false}, {id:1, text:"Una volpe lo vide e volle rubargli il formaggio. Si mise sotto l'albero e cominciò a fargli dei complimenti.", isHeader:false}, {id:2, text:"'Che belle penne che hai! Se la tua voce è bella come le tue penne, tu sei il re degli uccelli!'", isHeader:false}],
+                source: "Fedro", type: "Fabllar", url: null, image: null
+            }
+        ];
+
         // --- UTILS ---
         const translateText = async (text) => {
             if (!text || text.trim().length === 0) return "";
             try {
-                // HTML temizle ve sadece ilk 600 karakter (limit arttırıldı)
                 const cleanText = text.replace(/<[^>]*>?/gm, '').substring(0, 600);
                 const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=it|tr`;
                 const res = await fetch(url);
                 const data = await res.json();
-                
-                if(data.responseStatus === 200) {
-                    return data.responseData.translatedText;
-                }
-                return null;
-            } catch (err) {
-                return null;
-            }
+                return data.responseStatus === 200 ? data.responseData.translatedText : null;
+            } catch (err) { return null; }
         };
 
         // --- COMPONENTS ---
@@ -94,33 +98,30 @@
             };
 
             return (
-                <div className="animate-fade-in max-w-2xl mx-auto min-h-[50vh]">
+                <div className="animate-fade-in max-w-2xl mx-auto min-h-[60vh]">
                     <h3 className="text-xl font-bold mb-6 flex items-center gap-2 pb-4 border-b border-slate-200 dark:border-slate-700">
                         <Icons.Archive /> Kelime Koleksiyonum ({words.length})
                     </h3>
-                    <div className="space-y-3">
-                        {words.length === 0 ? (
-                            <div className="text-center py-10 opacity-60 flex flex-col items-center gap-2">
-                                <span className="text-4xl">📝</span>
-                                <p>Hikaye okurken kelime seçerek ekle.</p>
-                            </div>
-                        ) : (
-                            words.slice().reverse().map(w => (
-                                <div key={w.id} className={`flex items-start justify-between p-4 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-orange-100'}`}>
+                    {words.length === 0 ? (
+                        <div className="text-center py-20 opacity-50 flex flex-col items-center">
+                            <span className="text-4xl mb-2">📝</span>
+                            <p>Hikaye okurken kelimeleri seçerek buraya ekle.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-3">
+                            {words.slice().reverse().map(w => (
+                                <div key={w.id} className={`flex justify-between items-start p-4 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-orange-100'}`}>
                                     <div>
                                         <div className="text-xl font-bold text-orange-600 dark:text-orange-400 serif-font">{w.it}</div>
                                         <div className="flex flex-wrap gap-2 mt-2">
-                                            {w.tr && w.tr.map((m, i) => (
-                                                <span key={i} className={`text-xs px-2 py-1 rounded-md font-medium ${darkMode ? 'bg-slate-700 text-slate-300' : 'bg-orange-50 text-slate-600'}`}>{m}</span>
-                                            ))}
-                                            {(!w.tr || w.tr.length === 0) && <span className="text-xs text-slate-400">Çeviri yok</span>}
+                                            {w.tr && w.tr.map((m, i) => <span key={i} className={`text-xs px-2 py-1 rounded-md ${darkMode ? 'bg-slate-700 text-slate-300' : 'bg-orange-50 text-slate-700'}`}>{m}</span>)}
                                         </div>
                                     </div>
                                     <button onClick={() => deleteWord(w.id)} className="p-2 text-slate-300 hover:text-red-500"><Icons.Trash /></button>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -133,17 +134,11 @@
                 if (translated) { setTranslated(null); return; }
                 setLoadingTr(true);
                 const result = await translateText(text);
-                setTranslated(result || "Çeviri yapılamadı.");
+                setTranslated(result || "Çeviri servisine ulaşılamadı.");
                 setLoadingTr(false);
             };
 
-            if (isHeader) {
-                return (
-                    <div className="mt-8 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
-                         <h3 className="text-xl font-bold text-orange-600 dark:text-orange-400" dangerouslySetInnerHTML={{__html: text}} />
-                    </div>
-                );
-            }
+            if (isHeader) return <div className="mt-8 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2"><h3 className="text-xl font-bold text-orange-600 dark:text-orange-400" dangerouslySetInnerHTML={{__html: text}} /></div>;
 
             return (
                 <div className="mb-6">
@@ -151,83 +146,71 @@
                     <button onClick={handleTranslate} className={`mt-2 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${translated ? 'text-green-600' : 'text-slate-400 hover:text-orange-600'}`}>
                         {loadingTr ? "..." : translated ? <><Icons.Check /> Gizle</> : <><Icons.Translate /> Paragrafı Çevir</>}
                     </button>
-                    {translated && (
-                        <div className={`mt-2 p-3 rounded-lg text-sm border-l-4 animate-fade-in ${darkMode ? 'bg-slate-800 border-green-600 text-slate-300' : 'bg-orange-50 border-orange-400 text-slate-700'}`}>{translated}</div>
-                    )}
+                    {translated && <div className={`mt-2 p-3 rounded-lg text-sm border-l-4 animate-fade-in ${darkMode ? 'bg-slate-800 border-green-600 text-slate-300' : 'bg-orange-50 border-orange-400 text-slate-700'}`}>{translated}</div>}
                 </div>
             );
         };
 
         const App = () => {
-            // STATE: Ayrıştırılmış içerik (Hafızada tutmak için)
-            const [wikiData, setWikiData] = useState(null);
+            // STATE: Hafızada Tutulan İçerikler
             const [storyData, setStoryData] = useState(null);
+            const [wikiData, setWikiData] = useState(null);
             
             const [loading, setLoading] = useState(false);
             const [mode, setMode] = useState('story'); // 'story', 'wiki', 'words'
             const [darkMode, setDarkMode] = useState(false);
             const [notifPerm, setNotifPerm] = useState("default");
             
-            // Selection logic
+            // Selection Logic
             const [selectedText, setSelectedText] = useState("");
             const [isAddingWord, setIsAddingWord] = useState(false);
             const [toast, setToast] = useState(null);
 
-            // BİLDİRİM VE SAAT KONTROLÜ
+            // Bildirim İzni Kontrolü
             useEffect(() => {
-                if ("Notification" in window) setNotifPerm(Notification.permission);
-                
+                if ("Notification" in window) {
+                    setNotifPerm(Notification.permission);
+                }
+            }, []);
+
+            // Saat Başı Bildirim Kontrolü
+            useEffect(() => {
                 const timer = setInterval(() => {
                     const now = new Date();
-                    // Her sabah 9'da kontrol
                     if (now.getHours() === 9 && now.getMinutes() === 0) {
-                        sendNotification("Buongiorno! 🇮🇹", "Yeni İtalyanca okuman hazır.");
+                        if (Notification.permission === "granted") {
+                            new Notification("Buongiorno! 🇮🇹", { body: "Günlük okuman seni bekliyor.", icon: "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/Flag_of_Italy.svg/1200px-Flag_of_Italy.svg.png" });
+                        }
                     }
-                }, 60000); // Her dakika kontrol et
-
+                }, 60000);
                 return () => clearInterval(timer);
             }, []);
 
-            const requestNotification = () => {
-                if (!("Notification" in window)) {
-                    alert("Tarayıcınız bildirim desteklemiyor.");
-                    return;
-                }
-                Notification.requestPermission().then(perm => {
-                    setNotifPerm(perm);
-                    if(perm === 'granted') {
-                        showToast("Bildirimler açıldı! 🔔");
-                        new Notification("Benvenuto!", { body: "Bildirimler başarıyla ayarlandı." });
-                    }
-                });
-            };
-
-            const sendNotification = (title, body) => {
-                if (Notification.permission === "granted") {
-                    new Notification(title, { body });
-                }
-            };
-
-            // INIT FETCH: Eğer veri yoksa çek
+            // Initial Fetch Logic
             useEffect(() => {
                 if (mode === 'story' && !storyData) fetchContent('story');
                 if (mode === 'wiki' && !wikiData) fetchContent('wiki');
-            }, [mode]); // Sadece mod değişince tetikle
+            }, [mode]);
 
-            // SELECTION LISTENER
+            // Selection Event Listener
             useEffect(() => {
                 const handleSelection = () => {
                     const sel = window.getSelection();
                     const text = sel ? sel.toString().trim() : "";
-                    if (text.length > 1 && text.split(' ').length <= 4) {
-                        setSelectedText(text);
-                    } else {
-                        setSelectedText("");
-                    }
+                    if (text.length > 1 && text.split(' ').length <= 4) setSelectedText(text);
+                    else setSelectedText("");
                 };
                 document.addEventListener('selectionchange', handleSelection);
                 return () => document.removeEventListener('selectionchange', handleSelection);
             }, []);
+
+            const requestNotification = () => {
+                if (!("Notification" in window)) return;
+                Notification.requestPermission().then(perm => {
+                    setNotifPerm(perm);
+                    if(perm === 'granted') showToast("Bildirimler aktif! 🔔");
+                });
+            };
 
             const addSelectedWord = async (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -236,14 +219,13 @@
                 
                 const word = selectedText;
                 let meanings = ["", "", ""];
-
                 try {
                     const translation = await translateText(word);
                     if (translation) {
                         const splits = translation.split(',').map(s => s.trim());
-                        meanings[0] = splits[0] || "";
+                        meanings[0] = splits[0] || "?";
                         meanings[1] = splits[1] || "";
-                    } else { meanings[0] = "?"; }
+                    } else meanings[0] = "?";
                 } catch (err) { meanings[0] = "?"; }
 
                 const newItem = { id: Date.now(), it: word, tr: meanings.filter(m => m !== "") };
@@ -263,89 +245,37 @@
                 setTimeout(() => setToast(null), 3000);
             };
 
-            // --- YENİ ROBUST PARSER ---
-            const parseWikiHTML = (html, title, domain, typeLabel) => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Gereksizleri temizle
-                const junk = doc.querySelectorAll('style, script, .mw-empty-elt, .reference, .mw-editsection, table, .infobox, .navbox, .metadata');
-                junk.forEach(el => el.remove());
-
-                const sections = [];
-                let idCounter = 0;
-
-                // Recursive traverse for meaningful text
-                const traverse = (node) => {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        const text = node.textContent.trim();
-                        // 40 karakterden uzun, anlamlı cümleler
-                        if (text.length > 40) {
-                            const parentTag = node.parentElement.tagName;
-                            // Sadece bu tagların içindekileri al
-                            if(['P', 'DIV', 'LI', 'BLOCKQUOTE'].includes(parentTag)) {
-                                if(sections.length > 0 && sections[sections.length-1].text === node.parentElement.innerHTML) return;
-                                sections.push({ id: idCounter++, text: node.parentElement.innerHTML, isHeader: false });
-                            }
-                        }
-                    } else if (node.nodeType === Node.ELEMENT_NODE) {
-                        if (['H1','H2','H3'].includes(node.tagName) && node.textContent.trim().length > 3) {
-                            sections.push({ id: idCounter++, text: node.innerHTML, isHeader: true });
-                        } else {
-                            node.childNodes.forEach(traverse);
-                        }
-                    }
-                };
-                traverse(doc.body);
-
-                // Yedek plan: Eğer section çıkmazsa, tüm text'i alıp böl
-                if (sections.length === 0) {
-                    const raw = doc.body.innerText;
-                    const parts = raw.split(/\n\n+/);
-                    parts.forEach(p => {
-                        if (p.trim().length > 50) sections.push({id: idCounter++, text: p, isHeader: false});
-                    });
-                }
-                
-                if (sections.length === 0) throw new Error("İçerik boş");
-
-                return {
-                    title: title,
-                    sections: sections,
-                    source: domain,
-                    type: typeLabel,
-                    url: `https://${domain}/wiki/${encodeURIComponent(title)}`,
-                    image: null
-                };
-            };
-
+            // --- YENİ FETCH STRATEJİSİ ---
+            // Wikisource yerine Wikipedia Kategorileri + Fallback
             const fetchContent = async (reqMode) => {
                 setLoading(true);
-                setSelectedText(""); // Seçimi sıfırla
-
+                setSelectedText("");
                 try {
                     let pageTitle = "";
                     let domain = "it.wikipedia.org";
                     let typeLabel = "";
 
                     if (reqMode === 'story') {
-                        typeLabel = "Öykü / Roman Özeti";
-                        // YÖNTEM: "Romanzi italiani" kategorisinden rastgele sayfa çek
-                        // Bu çok daha güvenilir çünkü her zaman metin içerirler.
-                        const randomRes = await fetch(`https://it.wikipedia.org/w/api.php?origin=*&action=query&list=categorymembers&cmtitle=Category:Romanzi_italiani&cmtype=page&cmlimit=100&format=json`);
-                        const randomData = await randomRes.json();
-                        const items = randomData.query.categorymembers;
-                        const randomItem = items[Math.floor(Math.random() * items.length)];
-                        pageTitle = randomItem.title;
+                        // Wikipedia "Masallar" veya "Fabllar" kategorisinden sayfa çek
+                        // Bu sayfalar genellikle olay örgüsünü anlatır, hikaye olarak okunabilir
+                        const categories = ["Category:Fiabe", "Category:Favole", "Category:Racconti"];
+                        const randomCat = categories[Math.floor(Math.random() * categories.length)];
+                        typeLabel = "Hikaye / Masal";
+                        
+                        const listRes = await fetch(`https://${domain}/w/api.php?origin=*&action=query&list=categorymembers&cmtitle=${randomCat}&cmtype=page&cmlimit=100&format=json`);
+                        const listData = await listRes.json();
+                        const items = listData.query.categorymembers;
+                        if (!items || items.length === 0) throw new Error("Kategori boş");
+                        pageTitle = items[Math.floor(Math.random() * items.length)].title;
                     } else {
+                        // Rastgele Makale
                         typeLabel = "Kültür & Bilgi";
-                        // Tamamen rastgele makale
-                        const randomRes = await fetch(`https://it.wikipedia.org/w/api.php?origin=*&action=query&list=random&rnnamespace=0&rnlimit=1&format=json`);
+                        const randomRes = await fetch(`https://${domain}/w/api.php?origin=*&action=query&list=random&rnnamespace=0&rnlimit=1&format=json`);
                         const randomData = await randomRes.json();
                         pageTitle = randomData.query.random[0].title;
                     }
 
-                    // İçeriği Çek
+                    // İçeriği Parse Et
                     const contentUrl = `https://${domain}/w/api.php?origin=*&action=parse&page=${encodeURIComponent(pageTitle)}&prop=text|images&mobileformat=1&format=json&disableeditsection=1&disabletoc=1`;
                     const imgUrl = `https://${domain}/w/api.php?origin=*&action=query&titles=${encodeURIComponent(pageTitle)}&prop=pageimages&pithumbsize=600&format=json`;
 
@@ -353,38 +283,77 @@
                     const contentData = await contentRes.json();
                     const imgData = await imgRes.json();
 
-                    if (!contentData.parse) throw new Error("API Parse Hatası");
+                    if (!contentData.parse) throw new Error("Parse Hatası");
 
-                    const parsed = parseWikiHTML(contentData.parse.text['*'], contentData.parse.title, domain, typeLabel);
+                    // HTML Parsing
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(contentData.parse.text['*'], 'text/html');
                     
-                    // Resim ekle
+                    // Temizlik
+                    const junk = doc.querySelectorAll('style, script, .mw-empty-elt, .reference, table, .infobox, .navbox, .metadata');
+                    junk.forEach(el => el.remove());
+
+                    const sections = [];
+                    let idCounter = 0;
+                    
+                    // Metinleri topla
+                    const traverse = (node) => {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            const txt = node.textContent.trim();
+                            if (txt.length > 50 && ['P','DIV','LI'].includes(node.parentElement.tagName)) {
+                                if(sections.length > 0 && sections[sections.length-1].text === node.parentElement.innerHTML) return;
+                                sections.push({ id: idCounter++, text: node.parentElement.innerHTML, isHeader: false });
+                            }
+                        } else if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (['H1','H2','H3'].includes(node.tagName) && node.textContent.length > 3) {
+                                sections.push({ id: idCounter++, text: node.innerHTML, isHeader: true });
+                            } else {
+                                node.childNodes.forEach(traverse);
+                            }
+                        }
+                    };
+                    traverse(doc.body);
+
+                    if (sections.length === 0) throw new Error("İçerik boş");
+
+                    const parsed = {
+                        title: contentData.parse.title,
+                        sections: sections,
+                        source: domain,
+                        type: typeLabel,
+                        url: `https://${domain}/wiki/${encodeURIComponent(pageTitle)}`,
+                        image: null
+                    };
+
                     const pages = imgData.query.pages;
                     const pageId = Object.keys(pages)[0];
                     if (pages[pageId] && pages[pageId].thumbnail) parsed.image = pages[pageId].thumbnail.source;
 
-                    // Veriyi doğru state'e kaydet
+                    // Doğru yere kaydet
                     if (reqMode === 'story') setStoryData(parsed);
                     else setWikiData(parsed);
 
                 } catch (error) {
-                    console.error("Hata:", error);
-                    showToast("İçerik alınamadı. Tekrar deneniyor...");
+                    console.error(error);
+                    // HATA DURUMUNDA YEDEK YÜKLE
+                    if (reqMode === 'story') {
+                        const randomBackup = BACKUP_STORIES[Math.floor(Math.random() * BACKUP_STORIES.length)];
+                        setStoryData(randomBackup);
+                        showToast("Çevrimdışı hikaye yüklendi.");
+                    } else {
+                        showToast("Bağlantı hatası.");
+                    }
                 } finally {
                     setLoading(false);
                 }
             };
 
-            const refreshContent = () => {
-                fetchContent(mode);
-            };
-
-            // Hangi içeriği göstereceğiz?
-            const currentContent = mode === 'story' ? storyData : wikiData;
+            const refreshCurrent = () => fetchContent(mode);
+            const activeContent = mode === 'story' ? storyData : wikiData;
 
             return (
                 <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-[#fdfbf7] text-slate-800'}`}>
                     
-                    {/* Header */}
                     <header className={`p-4 sticky top-0 z-20 border-b backdrop-blur-md ${darkMode ? 'bg-slate-900/90 border-slate-700' : 'bg-[#fdfbf7]/90 border-orange-200'}`}>
                         <div className="max-w-3xl mx-auto flex justify-between items-center">
                             <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
@@ -419,45 +388,43 @@
                                         <div className={`w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mb-4 ${mode === 'story' ? 'border-orange-400' : 'border-blue-500'}`}></div>
                                         <p className="text-slate-400 font-medium">Yükleniyor...</p>
                                     </div>
-                                ) : currentContent ? (
+                                ) : activeContent ? (
                                     <div className="animate-fade-in pb-20">
                                         <div className="mb-8 text-center">
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-orange-100 text-orange-800'}`}>{currentContent.type}</span>
-                                            <h2 className="text-3xl md:text-5xl font-bold serif-font leading-tight mb-6">{currentContent.title}</h2>
-                                            {currentContent.image && (
+                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-orange-100 text-orange-800'}`}>{activeContent.type}</span>
+                                            <h2 className="text-3xl md:text-5xl font-bold serif-font leading-tight mb-6">{activeContent.title}</h2>
+                                            {activeContent.image && (
                                                 <div className="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden shadow-xl mb-8 group">
-                                                    <img src={currentContent.image} className="w-full h-full object-cover" alt="Cover" />
+                                                    <img src={activeContent.image} className="w-full h-full object-cover" alt="Cover" />
                                                 </div>
                                             )}
                                         </div>
 
                                         <div className={`article-content ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>
-                                            {currentContent.sections.map((sec, idx) => (
+                                            {activeContent.sections.map((sec, idx) => (
                                                 <Section key={idx} text={sec.text} isHeader={sec.isHeader} darkMode={darkMode} />
                                             ))}
                                         </div>
 
                                         <div className="mt-12 pt-8 border-t border-dashed border-slate-300 text-center text-sm text-slate-400">
-                                            <p className="mb-2">Kaynak: {currentContent.source}</p>
-                                            <a href={currentContent.url} target="_blank" className="inline-flex items-center gap-1 text-blue-500 hover:underline">Orijinal Sayfa <Icons.BookOpen /></a>
+                                            <p className="mb-2">Kaynak: {activeContent.source}</p>
+                                            {activeContent.url && <a href={activeContent.url} target="_blank" className="inline-flex items-center gap-1 text-blue-500 hover:underline">Orijinal Sayfa <Icons.BookOpen /></a>}
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="text-center py-20">
                                         <p className="mb-4">İçerik yüklenemedi.</p>
-                                        <button onClick={refreshContent} className="bg-orange-500 text-white px-4 py-2 rounded-lg">Tekrar Dene</button>
+                                        <button onClick={refreshCurrent} className="bg-orange-500 text-white px-4 py-2 rounded-lg">Tekrar Dene</button>
                                     </div>
                                 )}
                             </>
                         )}
-                        
-                        {/* MOBİL UYUMLU SABİT SEÇİM PANELI */}
+
+                        {/* MOBILE SELECTION BAR */}
                         {selectedText && mode !== 'words' && (
                             <div className="fixed bottom-0 left-0 right-0 p-4 z-50 animate-slide-up flex justify-center">
                                 <div className={`flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl border ${darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-orange-200'}`}>
-                                    <span className={`font-serif italic font-medium truncate max-w-[150px] ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                                        "{selectedText}"
-                                    </span>
+                                    <span className={`font-serif italic font-medium truncate max-w-[150px] ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>"{selectedText}"</span>
                                     <button
                                         onTouchStart={addSelectedWord}
                                         onClick={addSelectedWord}
@@ -481,7 +448,7 @@
 
                     {mode !== 'words' && !selectedText && (
                         <div className="fixed bottom-8 right-6 z-30">
-                            <button onClick={refreshContent} disabled={loading} className={`h-16 w-16 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${loading ? 'bg-slate-400' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'}`}>
+                            <button onClick={refreshCurrent} disabled={loading} className={`h-16 w-16 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${loading ? 'bg-slate-400' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'}`}>
                                 <Icons.Refresh loading={loading} />
                             </button>
                         </div>
